@@ -1,0 +1,3 @@
+payload:
+  - DOMAIN-SUFFIX,docker.io
+  - DOMAIN-SUFFIX,ghcr.io
