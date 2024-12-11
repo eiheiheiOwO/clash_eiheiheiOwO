@@ -22,3 +22,5 @@ DOMAIN-SUFFIX,v.daizheyu.com
 IP-CIDR,185.225.20.98/32,no-resolve
 DOMAIN,api.ytools.cc
 DOMAIN-SUFFIX,makima.online
+DOMAIN-SUFFIX,control4.com
+DOMAIN-SUFFIX,control4.pool.ntp.com
