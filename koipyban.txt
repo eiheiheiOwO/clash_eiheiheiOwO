@@ -1,5 +1,6 @@
 bulinkbulink.com
-trafficmanager.net
++.trafficmanager.net
+*.trafficmanager.net
 proxy.v2gh.com
 https://lilydlj.lilyyaya.top
 https://ablnk.absslk.xyz/GGZ2e4k
