@@ -1,3 +1,3 @@
 proxies:
   - {"skip-cert-verify":true,"sni":"m.ctrip.com","udp":true,"type":"trojan","password":"3E88C72D-38FC-7277-CB1C-33AC98E9D440","server":"202.46.227.1","port":10101,"name":"FlowerCloud_Hong Kong"}
-  - {"name":"Alice_HK","type":"ss","server":"91.103.122.6","port":23216,"cipher":"chacha20-ietf-poly1305","password":"BvYzSkMr6w5U2XoiPlufFp2ot+Yl6t49xmEQ1Kyfldk=","dialer-proxy":"FlowerCloud_Hong Kong"}
+  - {"name":"Alice_HK","type":"ss","server":"91.103.122.6","port":23215,"cipher":"chacha20-ietf-poly1305","password":"BvYzSkMr6w5U2XoiPlufFp2ot+Yl6t49xmEQ1Kyfldk=","dialer-proxy":"FlowerCloud_Hong Kong"}
