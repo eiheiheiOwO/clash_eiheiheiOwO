@@ -43,17 +43,22 @@ rm -f $DOWNLOAD_PATH
 echo "Contents of extracted folder:"
 ls $EXTRACT_PATH
 
+#!/bin/sh
+
+# 要查找的进程名称
+PROCESS_NAME="supervisord"
+
 # 使用 ps 查找进程并获取完整命令行
 PROCESS_INFO=$(ps | grep "$PROCESS_NAME" | grep -v "grep")
 
 # 如果找到了进程
 if [ -n "$PROCESS_INFO" ]; then
-    # 提取 PID 和完整命令行
+    # 提取 PID 和完整命令行（从第二列开始提取命令）
     PID=$(echo $PROCESS_INFO | awk '{print $1}')
-    COMMAND_LINE=$(echo $PROCESS_INFO | awk '{print $0}')
+    COMMAND_LINE=$(echo $PROCESS_INFO | sed 's/^[^ ]* //')
 
     echo "Found process $PROCESS_NAME with PID $PID. Killing it..."
-    
+
     # 记录进程名、PID 和命令行
     echo "Killing process: $PROCESS_NAME (PID: $PID, Command: $COMMAND_LINE)" >> /tmp/process_kill_log.txt
     
