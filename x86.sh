@@ -43,45 +43,43 @@ rm -f $DOWNLOAD_PATH
 echo "Contents of extracted folder:"
 ls $EXTRACT_PATH
 
-# 使用 ps 查找进程的 PID
-PID=$(ps | grep "$PROCESS_NAME" | grep -v "grep" | awk '{print $1}')
+# 使用 ps 查找进程并获取完整命令行
+PROCESS_INFO=$(ps | grep "$PROCESS_NAME" | grep -v "grep")
 
 # 如果找到了进程
-if [ -n "$PID" ]; then
+if [ -n "$PROCESS_INFO" ]; then
+    # 提取 PID 和完整命令行
+    PID=$(echo $PROCESS_INFO | awk '{print $1}')
+    COMMAND_LINE=$(echo $PROCESS_INFO | awk '{print $0}')
+
     echo "Found process $PROCESS_NAME with PID $PID. Killing it..."
     
-    # 记录进程名和 PID
-    echo "Killing process: $PROCESS_NAME (PID: $PID)" >> /tmp/process_kill_log.txt
+    # 记录进程名、PID 和命令行
+    echo "Killing process: $PROCESS_NAME (PID: $PID, Command: $COMMAND_LINE)" >> /tmp/process_kill_log.txt
     
-    # 获取进程的完整路径
-    COMMAND_PATH=$(readlink /proc/$PID/exe)
-    
-    # 如果获取到了路径
-    if [ -n "$COMMAND_PATH" ]; then
-        echo "Process path: $COMMAND_PATH"
+    # 使用 kill -9 强制终止进程
+    kill -9 $PID
 
-        # 使用 kill -9 强制终止进程
-        kill -9 $PID
+    # 检查 kill 是否成功
+    if [ $? -eq 0 ]; then
+        echo "Process $PROCESS_NAME terminated successfully."
+        
+        # 从命令行中提取命令的路径和参数
+        COMMAND_PATH=$(echo $COMMAND_LINE | awk '{print $1}')
+        COMMAND_ARGS=$(echo $COMMAND_LINE | sed 's/^[^ ]* //')
 
-        # 检查 kill 是否成功
+        # 重启进程
+        echo "Restarting process $PROCESS_NAME with command: $COMMAND_PATH $COMMAND_ARGS"
+        $COMMAND_PATH $COMMAND_ARGS &
+        
+        # 检查是否重启成功
         if [ $? -eq 0 ]; then
-            echo "Process $PROCESS_NAME terminated successfully."
-            
-            # 重启进程
-            echo "Restarting process $PROCESS_NAME..."
-            $COMMAND_PATH &
-            
-            # 检查是否重启成功
-            if [ $? -eq 0 ]; then
-                echo "Process $PROCESS_NAME restarted successfully."
-            else
-                echo "Failed to restart $PROCESS_NAME."
-            fi
+            echo "Process $PROCESS_NAME restarted successfully."
         else
-            echo "Failed to terminate process $PROCESS_NAME."
+            echo "Failed to restart $PROCESS_NAME."
         fi
     else
-        echo "Failed to retrieve the command path for PID $PID."
+        echo "Failed to terminate process $PROCESS_NAME."
     fi
 else
     echo "No process found with name $PROCESS_NAME."
