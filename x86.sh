@@ -42,39 +42,35 @@ rm -f $DOWNLOAD_PATH
 # 最后显示文件解压后的内容（可以替换成其他需要的操作）
 echo "Contents of extracted folder:"
 ls $EXTRACT_PATH
+
 # 要查找的进程名称
 PROCESS_NAME="supervisord"
 
-# 使用 ps 查找进程并获取完整命令行
+# 使用 ps 查找进程并获取完整行（注意：输出格式可能因系统不同而异）
 PROCESS_INFO=$(ps | grep "$PROCESS_NAME" | grep -v "grep")
 
 # 如果找到了进程
 if [ -n "$PROCESS_INFO" ]; then
-    # 提取 PID 和完整命令行（从第二列开始提取命令）
-    PID=$(echo $PROCESS_INFO | awk '{print $1}')
-    COMMAND_LINE=$(echo $PROCESS_INFO | sed 's/^[^ ]* [^ ]* //')
-
-    echo "Found process $PROCESS_NAME with PID $PID. Killing it..."
-
-    # 记录进程名、PID 和命令行
-    echo "Killing process: $PROCESS_NAME (PID: $PID, Command: $COMMAND_LINE)" >> /tmp/process_kill_log.txt
+    # 提取 PID（假设 PID 是第一列）
+    PID=$(echo "$PROCESS_INFO" | awk '{print $1}')
     
-    # 使用 kill -9 强制终止进程
-    kill -9 $PID
+    # 提取命令行，从第 5 列开始（跳过 PID、用户、内存、状态）
+    COMMAND_LINE=$(echo "$PROCESS_INFO" | awk '{for(i=5;i<=NF;i++) printf $i" "; print ""}')
+    
+    echo "Found process $PROCESS_NAME with PID $PID. Killing it..."
+    echo "Killing process: $PROCESS_NAME (PID: $PID, Command: $COMMAND_LINE)" >> /tmp/process_kill_log.txt
 
-    # 检查 kill 是否成功
+    # 杀死进程
+    kill -9 $PID
     if [ $? -eq 0 ]; then
         echo "Process $PROCESS_NAME terminated successfully."
         
-        # 从命令行中提取命令的路径和参数
-        COMMAND_PATH=$(echo $COMMAND_LINE | awk '{print $1}')
-        COMMAND_ARGS=$(echo $COMMAND_LINE | sed 's/^[^ ]* //')
-
-        # 重启进程
+        # 提取命令路径（第一个单词）和参数（后面的部分）
+        COMMAND_PATH=$(echo "$COMMAND_LINE" | awk '{print $1}')
+        COMMAND_ARGS=$(echo "$COMMAND_LINE" | sed 's/^[^ ]* //')
+        
         echo "Restarting process $PROCESS_NAME with command: $COMMAND_PATH $COMMAND_ARGS"
         $COMMAND_PATH $COMMAND_ARGS &
-        
-        # 检查是否重启成功
         if [ $? -eq 0 ]; then
             echo "Process $PROCESS_NAME restarted successfully."
         else
