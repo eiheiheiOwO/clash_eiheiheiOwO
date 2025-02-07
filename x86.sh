@@ -42,9 +42,6 @@ rm -f $DOWNLOAD_PATH
 # 最后显示文件解压后的内容（可以替换成其他需要的操作）
 echo "Contents of extracted folder:"
 ls $EXTRACT_PATH
-
-#!/bin/sh
-
 # 要查找的进程名称
 PROCESS_NAME="supervisord"
 
@@ -55,7 +52,7 @@ PROCESS_INFO=$(ps | grep "$PROCESS_NAME" | grep -v "grep")
 if [ -n "$PROCESS_INFO" ]; then
     # 提取 PID 和完整命令行（从第二列开始提取命令）
     PID=$(echo $PROCESS_INFO | awk '{print $1}')
-    COMMAND_LINE=$(echo $PROCESS_INFO | sed 's/^[^ ]* //')
+    COMMAND_LINE=$(echo $PROCESS_INFO | sed 's/^[^ ]* [^ ]* //')
 
     echo "Found process $PROCESS_NAME with PID $PID. Killing it..."
 
