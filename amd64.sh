@@ -43,6 +43,3 @@ rm -f $DOWNLOAD_PATH
 echo "Contents of extracted folder:"
 ls $EXTRACT_PATH
 service supervisord restart
-else
-    echo "No process found with name $PROCESS_NAME."
-fi
