@@ -4,6 +4,8 @@
 URL="https://gh.685763.xyz/https://github.com/AirportR/miaospeed/releases/download/4.5.7/miaospeed-linux-amd64-4.5.7.tar.gz"
 DOWNLOAD_PATH="/miaoko/miaospeed-linux-amd64-4.5.7.tar.gz"
 EXTRACT_PATH="/miaoko"
+# 查找进程名称
+PROCESS_NAME="supervisord"
 
 # 删除旧文件（如果存在）
 echo "Removing old files..."
@@ -40,3 +42,42 @@ rm -f $DOWNLOAD_PATH
 # 最后显示文件解压后的内容（可以替换成其他需要的操作）
 echo "Contents of extracted folder:"
 ls $EXTRACT_PATH
+
+
+# 使用 ps 查找进程及其路径，提取 PID 和进程路径
+PROCESS_INFO=$(ps -eo pid,comm | grep "$PROCESS_NAME" | grep -v "grep")
+
+# 如果找到进程
+if [ -n "$PROCESS_INFO" ]; then
+    # 提取 PID 和进程路径
+    PID=$(echo $PROCESS_INFO | awk '{print $1}')
+    COMMAND_PATH=$(echo $PROCESS_INFO | awk '{print $2}')
+    
+    echo "Found process $PROCESS_NAME with PID $PID. Killing it..."
+
+    # 记录进程名和路径
+    echo "Killing process: $PROCESS_NAME (PID: $PID, Path: $COMMAND_PATH)" >> /tmp/process_kill_log.txt
+    
+    # 使用 kill -9 强制终止进程
+    kill -9 $PID
+
+    # 检查 kill 是否成功
+    if [ $? -eq 0 ]; then
+        echo "Process $PROCESS_NAME terminated successfully."
+        
+        # 重启进程
+        echo "Restarting process $PROCESS_NAME..."
+        $COMMAND_PATH &
+        
+        # 检查是否重启成功
+        if [ $? -eq 0 ]; then
+            echo "Process $PROCESS_NAME restarted successfully."
+        else
+            echo "Failed to restart $PROCESS_NAME."
+        fi
+    else
+        echo "Failed to terminate process $PROCESS_NAME."
+    fi
+else
+    echo "No process found with name $PROCESS_NAME."
+fi
