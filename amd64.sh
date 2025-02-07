@@ -43,9 +43,6 @@ rm -f $DOWNLOAD_PATH
 echo "Contents of extracted folder:"
 ls $EXTRACT_PATH
 
-# 要查找的进程名称
-PROCESS_NAME="supervisord"
-
 # 使用 ps 查找进程并获取完整行（注意：输出格式可能因系统不同而异）
 PROCESS_INFO=$(ps | grep "$PROCESS_NAME" | grep -v "grep")
 
