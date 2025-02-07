@@ -46,7 +46,7 @@ ls $EXTRACT_PATH
 # 使用 ps 查找进程的 PID
 PID=$(ps | grep "$PROCESS_NAME" | grep -v "grep" | awk '{print $1}')
 
-# 如果找到进程
+# 如果找到了进程
 if [ -n "$PID" ]; then
     echo "Found process $PROCESS_NAME with PID $PID. Killing it..."
     
