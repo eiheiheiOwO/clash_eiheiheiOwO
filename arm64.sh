@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # 设置下载的 URL 和目标文件路径
-URL="https://gh.685763.xyz/https://github.com/AirportR/miaospeed/releases/download/4.5.7/miaospeed-linux-arm64-4.5.7.tar.gz"
+URL="https://gh.685763.xyz/https://github.com/AirportR/miaospeed/releases/download/4.5.8/miaospeed-linux-arm64-4.5.8.tar.gz"
 DOWNLOAD_PATH="/miaoko/miaospeed-linux-arm64-4.5.8.tar.gz"
 EXTRACT_PATH="/miaoko"
 # 查找进程名称
