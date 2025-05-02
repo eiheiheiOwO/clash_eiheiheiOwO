@@ -1,0 +1,11 @@
+serverAddr = "110.42.32.169"
+serverPort = 10231
+auth.method = "token"
+auth.token = "54fec75415c941bc8fcc5566fb86960a"
+
+[[proxies]]
+name = "webinstall"
+type = "http"
+localIP = "127.0.0.1"
+localPort = 80
+customDomains = ["frptest.685763.xyz"]
