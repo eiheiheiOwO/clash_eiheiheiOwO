@@ -15,6 +15,7 @@ echo "|__/  |__/|__/  |__/|______/   |__/    \______/ |__/  \__/ \______/ |__/  
 echo -e "${NC}"
 echo -e "${YELLOW}                                        Shell by TechSky & e1he1he10w0                               ${NC}"
 ghproxy="https://gh.685763.xyz/"
+ghapi="https://api.github.com/"
 configure_miaospeed() {
     DEFAULT_DIR="/miaoko"
     while true; do
@@ -73,7 +74,7 @@ esac
 echo "Detected architecture: $arch"
 get_latest_url() {
     repo="$1"
-    api_url="https://https://api.github.com/repos/${repo}/releases/latest"
+    api_url="https://${ghapi}repos/${repo}/releases/latest"
 
     download_url=$(curl -s "$api_url" \
         | jq -r --arg arch "$arch" '.assets[]
