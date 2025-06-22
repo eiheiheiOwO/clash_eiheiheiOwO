@@ -15,6 +15,7 @@ echo "|__/  |__/|__/  |__/|______/   |__/    \______/ |__/  \__/ \______/ |__/  
 echo -e "${NC}"
 echo -e "${YELLOW}                                        Shell by TechSky&e1he1he10w0                               ${NC}"
 proxy_prefix="https://gh.685763.xyz/"
+ghapi="https://api.github.com/"
 FILE="/miaoko/frpc"
 DIR="/miaokocache"
 # 检查文件是否存在，不存在就退出
@@ -46,7 +47,7 @@ rm -f /miaoko/miaospeed-linux-$arch
 rm -f /miaoko/frpc
 get_latest_url() {
     repo="$1"
-    api_url="${proxy_prefix}https://api.github.com/repos/${repo}/releases/latest"
+    api_url="https://${ghapi}/repos/${repo}/releases/latest"
 
     download_url=$(curl -s "$api_url" \
         | jq -r --arg arch "$arch" '.assets[]
