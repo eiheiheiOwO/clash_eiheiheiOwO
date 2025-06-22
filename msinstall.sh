@@ -14,7 +14,6 @@ echo "| \$\$  | \$\$| \$\$  | \$\$ /\$\$\$\$\$\$   | \$\$   |  \$\$\$\$\$\$/| \$
 echo "|__/  |__/|__/  |__/|______/   |__/    \______/ |__/  \__/ \______/ |__/      |________/|________/|_______/ "
 echo -e "${NC}"
 echo -e "${YELLOW}                                        Shell by TechSky & e1he1he10w0                               ${NC}"
-proxy_prefix="https://gh.685763.xyz/"
 configure_miaospeed() {
     DEFAULT_DIR="/miaoko"
     while true; do
@@ -73,7 +72,7 @@ esac
 echo "Detected architecture: $arch"
 get_latest_url() {
     repo="$1"
-    api_url="${proxy_prefix}https://api.github.com/repos/${repo}/releases/latest"
+    api_url="https://api.github.com/repos/${repo}/releases/latest"
 
     download_url=$(curl -s "$api_url" \
         | jq -r --arg arch "$arch" '.assets[]
@@ -95,7 +94,7 @@ for repo in $repos; do
     archive_path="$DIR/$filename"
 
     echo "Downloading from: $url"
-    curl -sL -o "$archive_path" "${proxy_prefix}${url}"
+    curl -sL -o "$archive_path" "${url}"
     echo "$repo downloaded to $archive_path."
 
     echo "Extracting $archive_path..."
