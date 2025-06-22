@@ -15,7 +15,7 @@ echo "|__/  |__/|__/  |__/|______/   |__/    \______/ |__/  \__/ \______/ |__/  
 echo -e "${NC}"
 echo -e "${YELLOW}                                        Shell by TechSky&e1he1he10w0                               ${NC}"
 proxy_prefix="https://gh.685763.xyz/"
-ghapi="https://api.github.com/"
+ghapi="https://api.github.com"
 FILE="/miaoko/frpc"
 DIR="/miaokocache"
 # 检查文件是否存在，不存在就退出
