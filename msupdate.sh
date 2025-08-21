@@ -21,7 +21,7 @@ echo -e "${GREEN}Auto-Update script for miaospeed & frpc with cron setup.${NC}"
 
 # --- 配置 ---
 proxy_prefix="https://gh.685763.xyz/"
-ghapi="gh.685763.xyz/https://api.github.com/"
+ghapi="https://api.github.com/"
 MIAOKO_DIR="/miaoko"
 FRPC_FILE="$MIAOKO_DIR/frpc"
 MIAOSPEED_FILE_PATTERN="$MIAOKO_DIR/miaospeed-linux-"
