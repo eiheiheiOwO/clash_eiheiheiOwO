@@ -130,7 +130,7 @@ for repo in $repos; do
     filename="$(basename "$url")"
     archive_path="$CACHE_DIR/$filename"
 
-    echo "正在从以下链接下载: ${proxy_prefix}${url}"
+    echo "正在从以下链接下载: ${url}"
     curl -sL -o "$archive_path" "${proxy_prefix}${url}"
     if [ $? -ne 0 ]; then
         echo "错误: 下载失败: $filename"
