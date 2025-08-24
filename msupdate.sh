@@ -78,9 +78,6 @@ start_services() {
 }
 echo "关键文件存在，继续操作..."
 
-# 停止服务
-stop_services
-
 # 创建临时缓存目录
 mkdir -p "$CACHE_DIR" || {
     echo "错误: 创建缓存目录失败: $CACHE_DIR"
@@ -94,18 +91,16 @@ case "$arch_raw" in
     aarch64|arm64) arch="arm64" ;;
     *)
         echo "错误: 不支持的架构: $arch_raw"
+        rm -rf "$CACHE_DIR"
         exit 1 ;;
 esac
 echo "检测到架构: $arch"
 
-# 清理旧文件
-rm -f "$MIAOKO_DIR/miaospeed-linux-$arch"
-rm -f "$MIAOKO_DIR/frpc"
 
 # 获取最新版本URL的函数
 get_latest_url() {
     local repo="$1"
-    local api_url="https://${ghapi}repos/${repo}/releases/latest"
+    local api_url="${ghapi}repos/${repo}/releases/latest" # Corrected URL format
     local download_url
 
     download_url=$(curl -s "$api_url" \
@@ -121,7 +116,7 @@ get_latest_url() {
     echo "$download_url"
 }
 
-# 循环下载和解压
+# 循环下载和解压到缓存目录
 repos="AirportR/miaospeed fatedier/frp"
 for repo in $repos; do
     echo "----------------------------------------"
@@ -135,7 +130,6 @@ for repo in $repos; do
     if [ $? -ne 0 ]; then
         echo "错误: 下载失败: $filename"
         rm -rf "$CACHE_DIR" # 下载失败时清理
-        start_services # 尝试恢复服务
         exit 1
     fi
     echo "$repo 已下载至 $archive_path."
@@ -144,7 +138,6 @@ for repo in $repos; do
     tar zxf "$archive_path" -C "$CACHE_DIR" >/dev/null 2>&1 || {
         echo "错误: 解压失败: $archive_path"
         rm -rf "$CACHE_DIR" # 解压失败时清理
-        start_services # 尝试恢复服务
         exit 1
     }
     rm -f "$archive_path"
@@ -161,10 +154,38 @@ for repo in $repos; do
 done
 
 echo "----------------------------------------"
-echo "更新文件..."
+# --- 新增：下载后验证文件 ---
+echo "正在验证下载的文件..."
+MIAOSPEED_NEW_FILE="$CACHE_DIR/miaospeed-linux-$arch"
+FRPC_NEW_FILE="$CACHE_DIR/frpc"
+
+if [ ! -s "$MIAOSPEED_NEW_FILE" ]; then
+    echo "错误: 下载的 miaospeed 文件 ($MIAOSPEED_NEW_FILE) 无效或为空。正在中止更新。"
+    rm -rf "$CACHE_DIR"
+    exit 1
+fi
+
+if [ ! -s "$FRPC_NEW_FILE" ]; then
+    echo "错误: 下载的 frpc 文件 ($FRPC_NEW_FILE) 无效或为空。正在中止更新。"
+    rm -rf "$CACHE_DIR"
+    exit 1
+fi
+echo "文件验证成功！准备应用更新。"
+# --- 验证结束 ---
+
+
+# 停止服务
+stop_services
+
+# 清理旧文件
+echo "正在清理旧版本..."
+rm -f "$MIAOKO_DIR/miaospeed-linux-$arch"
+rm -f "$MIAOKO_DIR/frpc"
+
+echo "正在更新文件..."
 # 从缓存目录拷贝新文件到目标目录
-cp "$CACHE_DIR/miaospeed-linux-$arch" "$MIAOKO_DIR/miaospeed-linux-$arch"
-cp "$CACHE_DIR/frpc" "$MIAOKO_DIR/frpc"
+cp "$MIAOSPEED_NEW_FILE" "$MIAOKO_DIR/miaospeed-linux-$arch"
+cp "$FRPC_NEW_FILE" "$MIAOKO_DIR/frpc"
 
 # 赋予执行权限
 chmod +x "$MIAOKO_DIR/miaospeed-linux-$arch"
@@ -185,7 +206,7 @@ setup_cron() {
     CRON_CMD="$RANDOM_MINUTE $CRON_HOUR * * * $SCRIPT_PATH"
     
     # 检查 crontab 中是否已有此脚本的任务
-    crontab -l | grep -v "$SCRIPT_PATH" > /tmp/crontab.tmp || true
+    (crontab -l 2>/dev/null | grep -v "$SCRIPT_PATH") > /tmp/crontab.tmp
     
     echo "将添加以下 cron 任务:"
     echo "$CRON_CMD"
@@ -201,7 +222,7 @@ setup_cron() {
 }
 
 # 检查是否需要设置cron
-if crontab -l | grep -q "$SCRIPT_PATH"; then
+if crontab -l 2>/dev/null | grep -q "$SCRIPT_PATH"; then
     echo "Cron 任务已存在，无需重复设置。"
 else
     setup_cron
