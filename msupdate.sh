@@ -100,7 +100,7 @@ echo "检测到架构: $arch"
 # 获取最新版本URL的函数
 get_latest_url() {
     local repo="$1"
-    local api_url="${ghapi}repos/${repo}/releases/latest" # Corrected URL format
+    local api_url="https://${ghapi}repos/${repo}/releases/latest" # Corrected URL format
     local download_url
 
     download_url=$(curl -s "$api_url" \
