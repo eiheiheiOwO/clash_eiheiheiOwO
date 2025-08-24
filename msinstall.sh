@@ -149,7 +149,7 @@ USE_PROCD=1
 start_service() {
     procd_open_instance
     procd_set_param command $DIR/miaospeed-linux-$arch server -bind 127.0.0.1:45500 -mtls -token $TOKEN_PARAM -path $PATH_PARAM -ipv6
-    procd_set_param respawn 3600 5 5
+    procd_set_param respawn
     procd_set_param stdout 1
     procd_set_param stderr 1
     procd_close_instance
@@ -172,7 +172,7 @@ USE_PROCD=1
 start_service() {
     procd_open_instance
     procd_set_param command $DIR/frpc -c $DIR/frpc.toml
-    procd_set_param respawn 3600 5 5
+    procd_set_param respawn
     procd_set_param stdout 1
     procd_set_param stderr 1
     procd_close_instance
