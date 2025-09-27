@@ -141,10 +141,11 @@ echo "Detected architecture: $arch"
 # 函数：从GitHub获取最新发布版URL
 get_latest_url() {
     repo="$1"
-    api_url="https://${ghapi}repos/${repo}/releases/latest"
+    # --- MODIFICATION 1: REMOVED /latest TO GET ALL RELEASES (INCLUDING PRE-RELEASES) ---
+    api_url="https://api.github.com/repos/${repo}/releases"
 
     download_url=$(curl -s "$api_url" \
-        | jq -r --arg arch "$arch" '.assets[]
+        | jq -r --arg arch "$arch" '.[0].assets[] # --- MODIFICATION 2: ADDED .[0] TO GET THE FIRST (NEWEST) RELEASE FROM THE LIST ---
             | select(.name | contains("linux") and contains($arch) and endswith(".tar.gz"))
             | .browser_download_url' \
         | head -n 1)
