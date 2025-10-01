@@ -98,7 +98,7 @@ get_config_from_api() {
     if [[ "$ADDRESS" == "a.haitunt.org:"* ]]; then
         FRPPORT_PARAM=${ADDRESS#a.haitunt.org:}
     else
-        echo "${RED}Error: The address returned by the server ('$ADDRESS') is not 'a.haitunt.org'. Aborting script.${NC}"
+        echo "${RED}Error: The address returned by the server ('$ADDRESS') is not valid. Aborting script.${NC}"
         exit 1
     fi
 
@@ -106,7 +106,6 @@ get_config_from_api() {
     echo "${GREEN}Configuration received successfully!${NC}"
     echo "${GREEN}--------------------------------------------------${NC}"
     echo "${GREEN}Username: $USER${NC}"
-    echo "${GREEN}FRP Server Address: a.haitunt.org${NC}"
     echo "${GREEN}FRP Port: $FRPPORT_PARAM${NC}"
     echo "${GREEN}Path: $PATH_PARAM${NC}"
     echo "${GREEN}Token: $TOKEN_PARAM${NC}"
