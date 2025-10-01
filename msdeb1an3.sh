@@ -82,11 +82,11 @@ get_config_from_api() {
         exit 1
     fi
 
-    # 从 'payload' 对象中提取信息
-    USER=$(echo "$API_RESPONSE" | jq -r '.payload.user')
-    TOKEN_PARAM=$(echo "$API_RESPONSE" | jq -r '.payload.token')
-    PATH_PARAM=$(echo "$API_RESPONSE" | jq -r '.payload.path')
-    ADDRESS=$(echo "$API_RESPONSE" | jq -r '.payload.address')
+    # 从 'payload' 对象中提取信息，并清除可能的回车符 (\r)
+    USER=$(echo "$API_RESPONSE" | jq -r '.payload.user' | tr -d '\r')
+    TOKEN_PARAM=$(echo "$API_RESPONSE" | jq -r '.payload.token' | tr -d '\r')
+    PATH_PARAM=$(echo "$API_RESPONSE" | jq -r '.payload.path' | tr -d '\r')
+    ADDRESS=$(echo "$API_RESPONSE" | jq -r '.payload.address' | tr -d '\r')
 
     # 验证关键信息是否存在或有效
     if [ "$USER" = "null" ] || [ -z "$USER" ] || [ "$TOKEN_PARAM" = "null" ] || [ "$PATH_PARAM" = "null" ] || [ "$ADDRESS" = "null" ]; then
