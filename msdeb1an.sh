@@ -4,6 +4,7 @@
 # 这样后续的 echo 命令就不再需要 -e 参数，拥有最好的兼容性
 GREEN=$(printf '\033[0;32m')
 YELLOW=$(printf '\033[0;33m')
+RED=$(printf '\033[0;31m')
 NC=$(printf '\033[0m')
 
 # 清屏
@@ -26,7 +27,7 @@ echo "${YELLOW}                                        Modified for Debian by Ge
 
 # 1. 检查Root权限
 if [ "$(id -u)" -ne 0 ]; then
-   echo "${YELLOW}This script must be run as root. Please use sudo.${NC}"
+   echo "${RED}This script must be run as root. Please use sudo.${NC}"
    exit 1
 fi
 
@@ -46,8 +47,8 @@ fi
 
 if [ -n "$missing_packages" ]; then
     missing_packages="${missing_packages# }"
-    echo "${YELLOW}Error: The following required packages are missing:${NC}"
-    echo "${YELLOW} -> $missing_packages${NC}"
+    echo "${RED}Error: The following required packages are missing:${NC}"
+    echo "${RED} -> $missing_packages${NC}"
     echo "${YELLOW}Please install them using the following command:${NC}"
     echo "sudo apt-get update && sudo apt-get install -y $missing_packages"
     exit 1
@@ -55,72 +56,78 @@ fi
 
 echo "${GREEN}All dependencies are installed.${NC}"
 
+# 3. 从命令行参数获取激活码
+ACTIVATION_CODE=$1
+if [ -z "$ACTIVATION_CODE" ]; then
+    echo "${RED}Error: No activation code provided.${NC}"
+    echo "${YELLOW}Usage: $0 <Activation_code>${NC}"
+    exit 1
+fi
+
+# 函数：通过API获取配置
+get_config_from_api() {
+    echo "Attempting to retrieve configuration with the provided activation code..."
+    API_URL="https://kpanel.685763.xyz/activation/verify"
+    
+    # 发送POST请求获取配置
+    API_RESPONSE=$(curl -s -X POST \
+        -H "User-Agent: KoipyActivationClient/1.0" \
+        -H "Content-Type: application/json" \
+        -d "{\"code\": \"$ACTIVATION_CODE\"}" \
+        "$API_URL")
+
+    # 检查curl是否成功以及响应是否为空
+    if [ $? -ne 0 ] || [ -z "$API_RESPONSE" ]; then
+        echo "${RED}Error: Failed to connect to the activation server or received an empty response.${NC}"
+        exit 1
+    fi
+
+    # 提取信息
+    USER=$(echo "$API_RESPONSE" | jq -r '.user')
+    TOKEN_PARAM=$(echo "$API_RESPONSE" | jq -r '.token')
+    PATH_PARAM=$(echo "$API_RESPONSE" | jq -r '.path')
+    ADDRESS=$(echo "$API_RESPONSE" | jq -r '.address')
+
+    # 验证关键信息是否存在
+    if [ "$USER" = "null" ] || [ "$TOKEN_PARAM" = "null" ] || [ "$PATH_PARAM" = "null" ] || [ "$ADDRESS" = "null" ]; then
+        echo "${RED}Error: Invalid activation code or malformed server response.${NC}"
+        echo "Server Response: $API_RESPONSE"
+        exit 1
+    fi
+    
+    # 验证address并提取端口
+    if [[ "$ADDRESS" == "a.haitunt.org:"* ]]; then
+        FRPPORT_PARAM=${ADDRESS#a.haitunt.org:}
+    else
+        echo "${RED}Error: The address returned by the server ('$ADDRESS') is not 'a.haitunt.org'. Aborting script.${NC}"
+        exit 1
+    fi
+
+    # 显示获取到的配置
+    echo "${GREEN}Configuration received successfully!${NC}"
+    echo "${GREEN}--------------------------------------------------${NC}"
+    echo "${GREEN}Username: $USER${NC}"
+    echo "${GREEN}FRP Server Address: a.haitunt.org${NC}"
+    echo "${GREEN}FRP Port: $FRPPORT_PARAM${NC}"
+    echo "${GREEN}Path: $PATH_PARAM${NC}"
+    echo "${GREEN}Token: $TOKEN_PARAM${NC}"
+    echo "${GREEN}--------------------------------------------------${NC}"
+}
+
 
 ghproxy="https://gh.685763.xyz/"
 ghapi="https://api.github.com/"
-
-# 函数：获取用户配置
-configure_miaospeed() {
-    DEFAULT_DIR="/miaoko"
-    while true; do
-        # 使用 echo -n 和 read 的组合，以获得最佳兼容性
-	    echo -n "${YELLOW}Please enter your username:${NC} "
-        read -r USER
-	    echo -n "${YELLOW}Would you like to customize the installation path?(y/N): ${NC} "
-        read -r CUSTOM_DIR
-        CUSTOM_DIR=${CUSTOM_DIR:-N}
-        
-        case "$CUSTOM_DIR" in
-            [Yy]*)
-                echo -n "${YELLOW}Please enter the installation path (e.g., /miaoko): ${NC} "
-                read -r USER_DIR
-                DIR=${USER_DIR:-$DEFAULT_DIR}
-                ;;
-            *)
-                DIR=$DEFAULT_DIR
-                ;;
-        esac
-
-        echo -n "${YELLOW}Please enter the TOKEN: ${NC} "
-        read -r TOKEN_PARAM
-        echo -n "${YELLOW}Please enter the PATH: ${NC} "
-        read -r PATH_PARAM
-        echo -n "${YELLOW}Please enter the FRP access port:${NC} "
-        read -r FRPPORT_PARAM
-        
-        echo ""
-        echo "${GREEN}--------------------------------------------------${NC}"
-        echo "${GREEN}Miaospeed configuration information for user:$USER ${NC}"
-        echo "${GREEN}Installation directory:$DIR ${NC}"
-        echo "${GREEN}FRP access port:$FRPPORT_PARAM ${NC}"
-        echo "${GREEN}Path: $PATH_PARAM${NC}"
-        echo "${GREEN}Token: $TOKEN_PARAM${NC}"
-        echo "${GREEN}--------------------------------------------------${NC}"
-        echo ""
-        
-        echo -n "${YELLOW}Please confirm whether the above information is correct.(Y/n): ${NC} "
-        read -r CONFIRM_CHOICE
-        CONFIRM_CHOICE=${CONFIRM_CHOICE:-Y}
-
-        case "$CONFIRM_CHOICE" in
-            [Yy]*)
-                break
-                ;;
-            *)
-                echo "${YELLOW}Please re-enter the configuration information.${NC}"
-                ;;
-        esac
-    done
-}
+DEFAULT_DIR="/miaoko"
+DIR=$DEFAULT_DIR
 
 # --- 主脚本逻辑 ---
 
-# 3. 获取用户配置
-configure_miaospeed
+# 3. 通过API获取配置
+get_config_from_api
 
 # 4. 创建安装目录
 mkdir -p "$DIR" || {
-    echo "Failed to create directory: $DIR"
+    echo "${RED}Failed to create directory: $DIR${NC}"
     exit 1
 }
 echo "Downloads will be saved to: $DIR"
@@ -133,7 +140,7 @@ case "$arch_raw" in
     aarch64|arm64)
         arch="arm64" ;;  
     *)
-        echo "Unsupported architecture: $arch_raw"
+        echo "${RED}Unsupported architecture: $arch_raw${NC}"
         exit 1 ;;  
 esac
 echo "Detected architecture: $arch"
@@ -141,17 +148,16 @@ echo "Detected architecture: $arch"
 # 函数：从GitHub获取最新发布版URL
 get_latest_url() {
     repo="$1"
-    # --- MODIFICATION 1: REMOVED /latest TO GET ALL RELEASES (INCLUDING PRE-RELEASES) ---
     api_url="https://api.github.com/repos/${repo}/releases"
 
     download_url=$(curl -s "$api_url" \
-        | jq -r --arg arch "$arch" '.[0].assets[] # --- MODIFICATION 2: ADDED .[0] TO GET THE FIRST (NEWEST) RELEASE FROM THE LIST ---
+        | jq -r --arg arch "$arch" '.[0].assets[]
             | select(.name | contains("linux") and contains($arch) and endswith(".tar.gz"))
             | .browser_download_url' \
         | head -n 1)
 
     if [ -z "$download_url" ] || [ "$download_url" = "null" ]; then
-        echo "Failed to find Linux tar.gz download URL for $repo"
+        echo "${RED}Failed to find Linux tar.gz download URL for $repo${NC}"
         exit 1
     fi
     echo "$download_url"
@@ -171,7 +177,7 @@ for repo in $repos; do
 
     echo "Extracting $archive_path..."
     tar zxf "$archive_path" -C "$DIR" >/dev/null 2>&1 || {
-        echo "Extraction failed for $archive_path"
+        echo "${RED}Extraction failed for $archive_path${NC}"
         exit 1
     }
     rm -f "$archive_path"
