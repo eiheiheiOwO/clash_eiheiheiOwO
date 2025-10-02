@@ -16,60 +16,104 @@ echo -e "${NC}"
 echo -e "${YELLOW}                                        Shell by TechSky & e1he1he10w0                               ${NC}"
 ghproxy="https://gh.685763.xyz/"
 ghapi="https://api.github.com/"
-configure_miaospeed() {
-    DEFAULT_DIR="/miaoko"
-    while true; do
-	    read -rp "$(echo -e "${YELLOW}Please enter your username:${NC}")" USER
-	    read -rp "$(echo -e "${YELLOW}Would you like to customize the installation path?(y/N): ${NC}")" CUSTOM_DIR
-        CUSTOM_DIR=${CUSTOM_DIR:-N}
-        if [[ "$CUSTOM_DIR" =~ ^[Yy]$ ]]; then
-            read -rp "$(echo -e "${YELLOW}Please enter the installation path (e.g., /miaoko): ${NC}")" USER_DIR
-            DIR=${USER_DIR:-$DEFAULT_DIR}
-        else
-            DIR=$DEFAULT_DIR
-		fi
-        read -rp "$(echo -e "${YELLOW}Please enter the TOKEN: ${NC}")" TOKEN_PARAM
-        read -rp "$(echo -e "${YELLOW}Please enter the PATH: ${NC}")" PATH_PARAM
-        read -rp "$(echo -e "${YELLOW}Please enter the FRP access port:${NC}")" FRPPORT_PARAM
-        echo ""
-        echo -e "${GREEN}--------------------------------------------------${NC}"
-        echo -e "${GREEN}Miaospeed configuration information for user:$USER ${NC}"
-        echo -e "${GREEN}Installation directory:$DIR ${NC}"
-        echo -e "${GREEN}FRP access port:$FRPPORT_PARAM ${NC}"
-        echo -e "${GREEN}Path: $PATH_PARAM${NC}"
-        echo -e "${GREEN}Token: $TOKEN_PARAM${NC}"
-        echo -e "${GREEN}--------------------------------------------------${NC}"
-        echo ""
-        read -rp "$(echo -e "${YELLOW}Please confirm whether the above information is correct.(Y/n): ${NC}")" CONFIRM_CHOICE
-        CONFIRM_CHOICE=${CONFIRM_CHOICE:-Y}
-        if [[ "$CONFIRM_CHOICE" =~ ^[Yy]$ ]]; then
-            break
-        else
-            echo -e "${YELLOW}Please re-enter the configuration information.${NC}"
-        fi
-    done
-}
-configure_miaospeed
-mkdir -p "$DIR" || {
-    echo "Failed to create directory: $DIR"
+
+# Check for activation code argument
+if [ -z "$1" ]; then
+    echo -e "${YELLOW}Usage: $0 <Activation_code>${NC}"
     exit 1
-}
-echo "Downloads will be saved to: $DIR"
-for cmd in curl jq tar; do
+fi
+ACTIVATION_CODE=$1
+
+# Check if curl and jq are installed
+for cmd in curl jq; do
   if ! command -v "$cmd" >/dev/null 2>&1; then
     echo "Error: $cmd is not installed. Please install it."
     exit 1
   fi
 done
+
+echo "Verifying activation code..."
+API_RESPONSE=$(curl -s -X POST \
+    -H "User-Agent: KoipyActivationClient/1.0" \
+    -H "Content-Type: application/json" \
+    -d "{\"code\": \"$ACTIVATION_CODE\"}" \
+    https://kpanel.685763.xyz/activation/verify)
+
+# Check if the API call returned anything and is valid JSON
+if [ -z "$API_RESPONSE" ] || ! echo "$API_RESPONSE" | jq -e . >/dev/null 2>&1; then
+    echo "Error: Failed to get a valid response from the activation server. Please check your network connection."
+    exit 1
+fi
+
+# Check the status from the response
+STATUS=$(echo "$API_RESPONSE" | jq -r .status)
+if [ "$STATUS" -ne 0 ]; then
+    echo "Error: Activation failed. Please check your activation code and try again."
+    exit 1
+fi
+
+# Parse the successful response from the 'payload' object and trim hidden characters
+PAYLOAD=$(echo "$API_RESPONSE" | jq .payload)
+ADDRESS=$(echo "$PAYLOAD" | jq -r .address | tr -d '\r')
+
+# Extract the server name and port
+SERVER_NAME=$(echo "$ADDRESS" | cut -d: -f1)
+FRPPORT_PARAM=$(echo "$ADDRESS" | cut -d: -f2)
+
+# Validate the server name without displaying it
+if [[ "$SERVER_NAME" != "a.haitunt.org" ]]; then
+    echo "Error: Invalid server address received from the activation server."
+    exit 1
+fi
+
+USER=$(echo "$PAYLOAD" | jq -r .user | tr -d '\r')
+TOKEN_PARAM=$(echo "$PAYLOAD" | jq -r .token | tr -d '\r')
+PATH_PARAM=$(echo "$PAYLOAD" | jq -r .path | tr -d '\r')
+
+DEFAULT_DIR="/miaoko"
+while true; do
+    read -rp "$(echo -e "${YELLOW}Would you like to customize the installation path?(y/N): ${NC}")" CUSTOM_DIR
+    CUSTOM_DIR=${CUSTOM_DIR:-N}
+    if [[ "$CUSTOM_DIR" =~ ^[Yy]$ ]]; then
+        read -rp "$(echo -e "${YELLOW}Please enter the installation path (e.g., /miaoko): ${NC}")" USER_DIR
+        DIR=${USER_DIR:-$DEFAULT_DIR}
+    else
+        DIR=$DEFAULT_DIR
+    fi
+
+    echo ""
+    echo -e "${GREEN}--------------------------------------------------${NC}"
+    echo -e "${GREEN}Miaospeed configuration information for user: $USER ${NC}"
+    echo -e "${GREEN}Installation directory: $DIR ${NC}"
+    echo -e "${GREEN}FRP access port: $FRPPORT_PARAM ${NC}"
+    echo -e "${GREEN}Path: $PATH_PARAM${NC}"
+    echo -e "${GREEN}Token: $TOKEN_PARAM${NC}"
+    echo -e "${GREEN}--------------------------------------------------${NC}"
+    echo ""
+    read -rp "$(echo -e "${YELLOW}Please confirm whether the above information is correct.(Y/n): ${NC}")" CONFIRM_CHOICE
+    CONFIRM_CHOICE=${CONFIRM_CHOICE:-Y}
+    if [[ "$CONFIRM_CHOICE" =~ ^[Yy]$ ]]; then
+        break
+    else
+        echo -e "${YELLOW}Installation cancelled by user.${NC}"
+        exit 1
+    fi
+done
+
+mkdir -p "$DIR" || {
+    echo "Failed to create directory: $DIR"
+    exit 1
+}
+echo "Downloads will be saved to: $DIR"
 arch_raw="$(uname -m)"
 case "$arch_raw" in
     x86_64|amd64)
-        arch="amd64" ;;  
+        arch="amd64" ;;
     aarch64|arm64)
-        arch="arm64" ;;  
+        arch="arm64" ;;
     *)
         echo "Unsupported architecture: $arch_raw"
-        exit 1 ;;  
+        exit 1 ;;
 esac
 echo "Detected architecture: $arch"
 get_latest_url() {
@@ -121,10 +165,10 @@ cd "$DIR" || exit 1
 for item in *; do
     case "$item" in
         miaospeed*|frpc)
-            ;;  
+            ;;
         *)
             rm -rf "$item"
-            ;;  
+            ;;
 esac
 done
 cat <<EOF > $DIR/frpc.toml
@@ -192,3 +236,5 @@ chmod +x /etc/init.d/miaospeed /etc/init.d/frpc
 /etc/init.d/frpc enable
 /etc/init.d/miaospeed start
 /etc/init.d/frpc start
+
+echo -e "${GREEN}Installation complete!${NC}"
