@@ -118,7 +118,8 @@ esac
 echo "Detected architecture: $arch"
 get_latest_url() {
     repo="$1"
-    api_url="https://${ghapi}repos/${repo}/releases/latest"
+    # FIX: Removed the extra "https://" prefix which caused an error
+    api_url="${ghapi}repos/${repo}/releases/latest"
 
     download_url=$(curl -s "$api_url" \
         | jq -r --arg arch "$arch" '.assets[]
