@@ -100,7 +100,7 @@ echo "检测到架构: $arch"
 echo "----------------------------------------"
 echo "正在处理仓库: AirportR/miaospeed..."
 MIAO_API_URL="https://${ghapi}/repos/AirportR/miaospeed/releases/latest"
-MIAO_FILENAME="miaospeed-linux-${arch}"
+MIAO_FILENAME="miaospeed-linux-${arch}.tar.gz"
 MIAO_URL=$(curl -s "$MIAO_API_URL" | jq -r --arg name "$MIAO_FILENAME" '.assets[] | select(.name == $name) | .browser_download_url' | head -n 1)
 
 if [ -z "$MIAO_URL" ] || [ "$MIAO_URL" = "null" ]; then
