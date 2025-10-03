@@ -16,12 +16,12 @@ echo "| \$\$  | \$\$| \$\$  | \$\$  | \$\$     | \$\$   | \$\$  | \$\$| \$\$\  \
 echo "| \$\$  | \$\$| \$\$  | \$\$ /\$\$\$\$\$\$   | \$\$   |  \$\$\$\$\$\$/| \$\$ \  \$\$|  \$\$\$\$\$\$/| \$\$      | \$\$\$\$\$\$\$\$| \$\$\$\$\$\$\$\$| \$\$\$\$\$\$\$/"
 echo "|__/  |__/|__/  |__/|______/   |__/    \______/ |__/  \__/ \______/ |__/      |________/|________/|_______/ "
 echo -e "${NC}"
-echo -e "${YELLOW}                                        Shell by TechSky & e1he1he10w0 (Patched)                     ${NC}"
+echo -e "${YELLOW}                                        Shell by TechSky & e1he1he10w0                               ${NC}"
 echo -e "${GREEN}Auto-Update script for miaospeed & frpc with cron setup.${NC}"
 
 # --- 配置 ---
 proxy_prefix="https://gh.685763.xyz/"
-ghapi="gh.685763.xyz/api.github.com" # Removed protocol for clarity
+ghapi="https://api.github.com/"
 MIAOKO_DIR="/miaoko"
 FRPC_FILE="$MIAOKO_DIR/frpc"
 MIAOSPEED_FILE_PATTERN="$MIAOKO_DIR/miaospeed-linux-"
@@ -96,69 +96,65 @@ case "$arch_raw" in
 esac
 echo "检测到架构: $arch"
 
-# --- 下载和处理 miaospeed ---
-echo "----------------------------------------"
-echo "正在处理仓库: AirportR/miaospeed..."
-MIAO_API_URL="https://${ghapi}/repos/AirportR/miaospeed/releases/latest"
-MIAO_FILENAME="miaospeed-linux-${arch}.tar.gz"
-MIAO_URL=$(curl -s "$MIAO_API_URL" | jq -r --arg name "$MIAO_FILENAME" '.assets[] | select(.name == $name) | .browser_download_url' | head -n 1)
 
-if [ -z "$MIAO_URL" ] || [ "$MIAO_URL" = "null" ]; then
-    echo "错误: 未能找到适用于 miaospeed 的下载链接 (需要文件: ${MIAO_FILENAME})。"
-    rm -rf "$CACHE_DIR"
-    exit 1
-fi
+# 获取最新版本URL的函数
+get_latest_url() {
+    local repo="$1"
+    local api_url="${ghapi}repos/${repo}/releases/latest" # Corrected URL format
+    local download_url
 
-echo "正在从以下链接下载: ${MIAO_URL}"
-curl -sL -o "$CACHE_DIR/$MIAO_FILENAME" "${proxy_prefix}${MIAO_URL}"
-if [ $? -ne 0 ]; then
-    echo "错误: 下载失败: $MIAO_FILENAME"
-    rm -rf "$CACHE_DIR"
-    exit 1
-fi
-echo "miaospeed 已下载至 $CACHE_DIR/$MIAO_FILENAME."
+    download_url=$(curl -s "$api_url" \
+        | jq -r --arg arch "$arch" '.assets[]
+            | select(.name | contains("linux") and contains($arch) and endswith(".tar.gz"))
+            | .browser_download_url' \
+        | head -n 1)
 
-# --- 下载和处理 frp ---
-echo "----------------------------------------"
-echo "正在处理仓库: fatedier/frp..."
-FRP_API_URL="https://${ghapi}/repos/fatedier/frp/releases/latest"
-FRP_URL=$(curl -s "$FRP_API_URL" | jq -r --arg arch "$arch" '.assets[] | select(.name | contains("linux") and contains($arch) and endswith(".tar.gz")) | .browser_download_url' | head -n 1)
-
-if [ -z "$FRP_URL" ] || [ "$FRP_URL" = "null" ]; then
-    echo "错误: 未能找到适用于 frp 的 Linux tar.gz 下载链接。"
-    rm -rf "$CACHE_DIR"
-    exit 1
-fi
-
-FRP_FILENAME=$(basename "$FRP_URL")
-ARCHIVE_PATH="$CACHE_DIR/$FRP_FILENAME"
-echo "正在从以下链接下载: ${FRP_URL}"
-curl -sL -o "$ARCHIVE_PATH" "${proxy_prefix}${FRP_URL}"
-if [ $? -ne 0 ]; then
-    echo "错误: 下载失败: $FRP_FILENAME"
-    rm -rf "$CACHE_DIR"
-    exit 1
-fi
-echo "frp 已下载至 $ARCHIVE_PATH."
-
-echo "正在解压 $ARCHIVE_PATH..."
-tar zxf "$ARCHIVE_PATH" -C "$CACHE_DIR" >/dev/null 2>&1 || {
-    echo "错误: 解压失败: $ARCHIVE_PATH"
-    rm -rf "$CACHE_DIR"
-    exit 1
+    if [ -z "$download_url" ] || [ "$download_url" = "null" ]; then
+        echo "错误: 未能找到适用于 $repo 的 Linux tar.gz 下载链接"
+        exit 1
+    fi
+    echo "$download_url"
 }
-rm -f "$ARCHIVE_PATH"
 
-# 提取frpc
-nested_dir=$(find "$CACHE_DIR" -maxdepth 1 -type d -name "frp*linux*${arch}*" | head -n 1)
-if [ -n "$nested_dir" ] && [ -f "$nested_dir/frpc" ]; then
-    mv "$nested_dir/frpc" "$CACHE_DIR/"
-    rm -rf "$nested_dir"
-    echo "frpc 已被提取并移动。"
-fi
+# 循环下载和解压到缓存目录
+repos="AirportR/miaospeed fatedier/frp"
+for repo in $repos; do
+    echo "----------------------------------------"
+    echo "正在处理仓库: $repo..."
+    url=$(get_latest_url "$repo")
+    filename="$(basename "$url")"
+    archive_path="$CACHE_DIR/$filename"
+
+    echo "正在从以下链接下载: ${url}"
+    curl -sL -o "$archive_path" "${proxy_prefix}${url}"
+    if [ $? -ne 0 ]; then
+        echo "错误: 下载失败: $filename"
+        rm -rf "$CACHE_DIR" # 下载失败时清理
+        exit 1
+    fi
+    echo "$repo 已下载至 $archive_path."
+
+    echo "正在解压 $archive_path..."
+    tar zxf "$archive_path" -C "$CACHE_DIR" >/dev/null 2>&1 || {
+        echo "错误: 解压失败: $archive_path"
+        rm -rf "$CACHE_DIR" # 解压失败时清理
+        exit 1
+    }
+    rm -f "$archive_path"
+
+    # 特殊处理frp解压后的目录
+    if [ "$repo" = "fatedier/frp" ]; then
+        nested_dir=$(find "$CACHE_DIR" -maxdepth 1 -type d -name "frp*linux*${arch}*" | head -n 1)
+        if [ -n "$nested_dir" ] && [ -f "$nested_dir/frpc" ]; then
+            mv "$nested_dir/frpc" "$CACHE_DIR/"
+            rm -rf "$nested_dir"
+            echo "frpc 已被提取并移动。"
+        fi
+    fi
+done
 
 echo "----------------------------------------"
-# --- 下载后验证文件 ---
+# --- 新增：下载后验证文件 ---
 echo "正在验证下载的文件..."
 MIAOSPEED_NEW_FILE="$CACHE_DIR/miaospeed-linux-$arch"
 FRPC_NEW_FILE="$CACHE_DIR/frpc"
