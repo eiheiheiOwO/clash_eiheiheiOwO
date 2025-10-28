@@ -209,7 +209,7 @@ restart_service() {
     start_service
 }
 EOF
-cat <<EOF > /etc/init.d/frpc
+cat <<EOF > /etc/init.d/msfrpc
 #!/bin/sh /etc/rc.common
 START=99
 STOP=10
@@ -232,10 +232,10 @@ restart_service() {
     start_service
 }
 EOF
-chmod +x /etc/init.d/miaospeed /etc/init.d/frpc
+chmod +x /etc/init.d/miaospeed /etc/init.d/msfrpc
 /etc/init.d/miaospeed enable
-/etc/init.d/frpc enable
+/etc/init.d/msfrpc enable
 /etc/init.d/miaospeed start
-/etc/init.d/frpc start
+/etc/init.d/msfrpc start
 
 echo -e "${GREEN}Installation complete!${NC}"
