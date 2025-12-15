@@ -40,10 +40,10 @@ stop_services() {
         fi
         SERVICE_MANAGER="supervisord"
     # 检查 OpenWrt init.d 服务
-    elif [ -f /etc/init.d/miaospeed ] && [ -f /etc/init.d/frpc ]; then
+    elif [ -f /etc/init.d/miaospeed ] && [ -f /etc/init.d/msfrpc ]; then
         echo "Detected OpenWrt services. Stopping them..."
         /etc/init.d/miaospeed stop
-        /etc/init.d/frpc stop
+        /etc/init.d/msfrpc stop
         echo "OpenWrt services stopped."
         SERVICE_MANAGER="openwrt"
     else
@@ -62,7 +62,7 @@ start_services() {
         openwrt)
             echo "Starting OpenWrt services..."
             /etc/init.d/miaospeed start
-            /etc/init.d/frpc start
+            /etc/init.d/msfrpc start
             ;;
         *)
             echo "Warning: Unknown service manager. Please start services manually."
