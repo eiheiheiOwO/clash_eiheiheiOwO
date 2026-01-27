@@ -113,7 +113,7 @@ get_config_from_api() {
 }
 
 
-ghproxy="https://gh.685763.xyz/"
+ghproxy="https://gh.haitunt.org/"
 ghapi="https://api.github.com/"
 DEFAULT_DIR="/miaoko"
 DIR=$DEFAULT_DIR
