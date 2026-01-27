@@ -20,7 +20,7 @@ echo -e "${YELLOW}                                        Shell by TechSky & e1h
 echo -e "${GREEN}Auto-Update script for miaospeed & frpc with cron setup.${NC}"
 
 # --- 配置 ---
-proxy_prefix="https://gh.685763.xyz/"
+proxy_prefix="https://gh.haitunt.org/"
 ghapi="https://api.github.com/"
 MIAOKO_DIR="/miaoko"
 FRPC_FILE="$MIAOKO_DIR/frpc"
