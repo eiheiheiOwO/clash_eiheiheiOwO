@@ -14,7 +14,7 @@ echo "| \$\$  | \$\$| \$\$  | \$\$ /\$\$\$\$\$\$   | \$\$   |  \$\$\$\$\$\$/| \$
 echo "|__/  |__/|__/  |__/|______/   |__/    \______/ |__/  \__/ \______/ |__/      |________/|________/|_______/ "
 echo -e "${NC}"
 echo -e "${YELLOW}                                        Shell by TechSky & e1he1he10w0                               ${NC}"
-ghproxy="https://gh.685763.xyz/"
+ghproxy="https://gh.haitunt.org/"
 ghapi="https://api.github.com/"
 
 # Check for activation code argument
