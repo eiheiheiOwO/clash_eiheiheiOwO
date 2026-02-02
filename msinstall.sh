@@ -177,7 +177,7 @@ serverAddr = "a.haitunt.org"
 serverPort = 10102
 auth.method = "token"
 auth.token = "OUaW6oLUSzNjmSb2"
-dnsServer = "223.5.5.5"
+dnsServer = "119.29.29.29"
 
 [[proxies]]
 name = "$USER.$FRPPORT_PARAM"
