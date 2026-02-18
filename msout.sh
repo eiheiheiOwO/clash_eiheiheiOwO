@@ -21,7 +21,7 @@ echo '| $$  | $$| $$  | $$ /$$$$$$   | $$   |  $$$$$$/| $$ \  $$|  $$$$$$/| $$  
 echo '|__/  |__/|__/  |__/|______/   |__/    \______/ |__/  \__/ \______/ |__/      |________/|________/|_______/ '
 echo "${NC}"
 echo "${YELLOW}                                        Shell by TechSky & e1he1he10w0                               ${NC}"
-echo "${YELLOW}                                        Modified for Debian by Gemini (DDNS Added)                   ${NC}"
+echo "${YELLOW}                                        Modified for Debian by Gemini                                 ${NC}"
 
 
 # 1. 检查Root权限
@@ -55,46 +55,23 @@ fi
 
 echo "${GREEN}All dependencies are installed.${NC}"
 
-# 3. 从命令行参数获取 Token, Path 和 Subdomain
-MIAO_TOKEN=$1
-MIAO_PATH=$2
-DDNS_SUBDOMAIN=$3
+# 3. 自动生成随机 Token 和 Path
+generate_random_string() {
+    length="$1"
+    tr -dc 'A-Za-z0-9' </dev/urandom | head -c "$length"
+}
 
-if [ -z "$MIAO_TOKEN" ] || [ -z "$MIAO_PATH" ] || [ -z "$DDNS_SUBDOMAIN" ]; then
-    echo "${RED}Error: Missing arguments.${NC}"
-    echo "${YELLOW}Usage: $0 <Token> <Path> <Subdomain>${NC}"
-    echo "${YELLOW}Example: $0 my-token /path hvj7bjgm${NC}"
+MIAO_TOKEN="$(generate_random_string 32)"
+MIAO_PATH="/$(generate_random_string 16)"
+
+if [ -z "$MIAO_TOKEN" ] || [ -z "$MIAO_PATH" ]; then
+    echo "${RED}Error: Failed to generate random Token or Path.${NC}"
     exit 1
 fi
 
-echo "${GREEN}Configuration set manually:${NC}"
+echo "${GREEN}Configuration generated automatically:${NC}"
 echo "${GREEN}Token:     $MIAO_TOKEN${NC}"
 echo "${GREEN}Path:      $MIAO_PATH${NC}"
-echo "${GREEN}Subdomain: $DDNS_SUBDOMAIN${NC}"
-echo "${GREEN}--------------------------------------------------${NC}"
-
-
-# --- 新增步骤：执行 DDNS 更新 ---
-echo "Starting DDNS update process..."
-
-# 获取公网IP
-PUBLIC_IP=$(curl -s ipv4.ip.sb | tr -d '\n')
-
-if [ -z "$PUBLIC_IP" ]; then
-    echo "${RED}Error: Failed to fetch public IP from ipv4.ip.sb${NC}"
-    # 这里可以选择 exit 1 退出，或者继续执行安装。为了安全起见，这里选择继续，但报警告。
-    echo "${YELLOW}Continuing installation without DDNS update...${NC}"
-else
-    echo "Detected Public IP: ${GREEN}$PUBLIC_IP${NC}"
-    echo "Updating DDNS for domain: ${GREEN}${DDNS_SUBDOMAIN}.haitunt.org${NC}"
-    
-    # 执行 curl POST
-    DDNS_RESPONSE=$(curl -s -X POST "https://koipyddns.haitunt.org/api/update?domain=${DDNS_SUBDOMAIN}.haitunt.org&ip=${PUBLIC_IP}" \
-         -H "Authorization: sk_T82rDd8XO_Eboy44HekJ_3PzFhiyym5p" \
-         --user-agent "KoipyDdns/2.0")
-         
-    echo "DDNS Response: $DDNS_RESPONSE"
-fi
 echo "${GREEN}--------------------------------------------------${NC}"
 
 
@@ -191,7 +168,14 @@ echo "Reloading supervisor and starting services..."
 supervisorctl reread
 supervisorctl update
 
+PUBLIC_IPV4="$(curl -s --max-time 8 ipv4.ip.sb | tr -d '\n')"
+if [ -z "$PUBLIC_IPV4" ]; then
+    PUBLIC_IPV4="Unavailable"
+fi
+
 echo "${GREEN}Installation complete!${NC}"
 echo "${GREEN}Miaospeed is now managed by supervisor.${NC}"
-echo "${GREEN}DDNS update attempted for ${DDNS_SUBDOMAIN}.haitunt.org${NC}"
+echo "${GREEN}Public IPv4: $PUBLIC_IPV4${NC}"
+echo "${GREEN}Token:       $MIAO_TOKEN${NC}"
+echo "${GREEN}Path:        $MIAO_PATH${NC}"
 echo "${GREEN}You can check its status with: supervisorctl status${NC}"
