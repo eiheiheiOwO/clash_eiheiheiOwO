@@ -61,6 +61,13 @@ generate_random_string() {
     tr -dc 'A-Za-z0-9' </dev/urandom | head -c "$length"
 }
 
+# GitHub 代理前缀（用于无法直连 GitHub 的区域）
+GITHUB_PROXY_PREFIX="https://gh.haitunt.org/"
+
+with_github_proxy() {
+    printf '%s%s' "$GITHUB_PROXY_PREFIX" "$1"
+}
+
 MIAO_TOKEN="$(generate_random_string 32)"
 MIAO_PATH="/$(generate_random_string 16)"
 
@@ -98,12 +105,13 @@ case "$arch_raw" in
 esac
 echo "Detected architecture: $arch"
 
-# 函数：从GitHub获取最新发布版URL (不经过代理)
+# 函数：从GitHub获取最新发布版URL (通过代理)
 get_latest_url() {
     repo="$1"
     api_url="https://api.github.com/repos/${repo}/releases"
+    proxied_api_url="$(with_github_proxy "$api_url")"
 
-    download_url=$(curl -s "$api_url" \
+    download_url=$(curl -s "$proxied_api_url" \
         | jq -r --arg arch "$arch" '.[0].assets[]
             | select(.name | contains("linux") and contains($arch) and endswith(".tar.gz"))
             | .browser_download_url' \
@@ -124,7 +132,7 @@ filename="$(basename "$url")"
 archive_path="$DIR/$filename"
 
 echo "Downloading from: $url"
-curl -sL -o "$archive_path" "${url}"
+curl -sL -o "$archive_path" "$(with_github_proxy "$url")"
 echo "$repo downloaded to $archive_path."
 
 echo "Extracting $archive_path..."
