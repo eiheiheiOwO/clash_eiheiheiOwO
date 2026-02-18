@@ -92,7 +92,7 @@ if [ "$TEST_URL_ONLY" -eq 1 ]; then
         exit 1
     fi
 
-    echo "$url"
+    echo "$(with_github_proxy "$url")"
     exit 0
 fi
 
