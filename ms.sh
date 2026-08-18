@@ -131,12 +131,16 @@ detect_arch() {
 #   msdebian: 校验 user/token/path/address 完整 + address 格式
 #   msinstall: 校验 .status == 0 + JSON 合法性
 activate() {
-    local code="$1" resp user token path addr frp_port v
+    local code="$1" otp="$2" resp user token path addr frp_port v payload
     warn "正在通过激活码获取配置..."
+    payload="{\"code\": \"$code\"}"
+    if [ -n "$otp" ]; then
+        payload="{\"code\": \"$code\", \"otp\": \"$otp\"}"
+    fi
     resp=$(curl -s -X POST \
         -H "User-Agent: KoipyActivationClient/1.0" \
         -H "Content-Type: application/json" \
-        -d "{\"code\": \"$code\"}" \
+        -d "$payload" \
         "$API_URL") || die "无法连接激活服务器"
     [ -n "$resp" ] || die "激活服务器返回空响应"
     echo "$resp" | jq -e . >/dev/null 2>&1 || die "激活服务器响应不是有效 JSON"
@@ -375,7 +379,7 @@ setup_cron() {
 
 # ---------------- 安装流程 ----------------
 cmd_install() {
-    local code="$1" platform="$2" dir custom confirm
+    local code="$1" platform="$2" otp="$3" dir custom confirm
     [ -n "$code" ] || die "缺少激活码。用法: ./ms.sh install <激活码>"
     check_root
     if [ "$platform" = "auto" ]; then
@@ -386,7 +390,7 @@ cmd_install() {
     info "目标平台: $platform"
     check_deps
     detect_arch
-    activate "$code"
+    activate "$code" "$otp"
 
     # 安装路径选择 + 信息确认 (交互式, -y 或非 TTY 时用默认值)
     dir="$DEFAULT_DIR"
@@ -498,13 +502,13 @@ cmd_update() {
 
 # ---------------- 仅挂 frp (已有后端) ----------------
 cmd_frp_only() {
-    local code="$1" dir url archive nested
+    local code="$1" otp="$2" dir url archive nested
     [ -n "$code" ] || die "缺少激活码。用法: ./ms.sh frp-only <激活码>"
     check_root
     command -v curl >/dev/null 2>&1 || die "缺少 curl"
     command -v jq >/dev/null 2>&1 || die "缺少 jq"
     detect_arch
-    activate "$code"
+    activate "$code" "$otp"
     dir="$DEFAULT_DIR"
     mkdir -p "$dir" || die "无法创建目录: $dir"
     info "下载 frpc ..."
@@ -529,7 +533,7 @@ cmd_frp_only() {
 
 # ---------------- 入口 ----------------
 main() {
-    local cmd="" code=""
+    local cmd="" code="" otp=""
     banner
     while [ $# -gt 0 ]; do
         case "$1" in
@@ -543,17 +547,21 @@ main() {
             *)
                 # 首参不是已知命令时视为激活码 (兼容旧用法: ./ms.sh CODE)
                 [ -z "$cmd" ] && cmd="install"
-                code="$1"
+                if [ -z "$code" ]; then
+                    code="$1"
+                else
+                    otp="$1"
+                fi
                 shift
                 ;;
         esac
     done
     case "$cmd" in
         update) cmd_update ;;
-        install-debian) cmd_install "$code" debian ;;
-        install-openwrt) cmd_install "$code" openwrt ;;
-        frp-only) cmd_frp_only "$code" ;;
-        install) cmd_install "$code" auto ;;
+        install-debian) cmd_install "$code" debian "$otp" ;;
+        install-openwrt) cmd_install "$code" openwrt "$otp" ;;
+        frp-only) cmd_frp_only "$code" "$otp" ;;
+        install) cmd_install "$code" auto "$otp" ;;
         *) usage; exit 1 ;;
     esac
 }
