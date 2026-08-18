@@ -12,6 +12,7 @@
 #   ./ms.sh install <激活码>         自动检测平台并安装
 #   ./ms.sh install-debian <激活码>  强制 Debian 安装 (supervisor)
 #   ./ms.sh install-openwrt <激活码> 强制 OpenWrt 安装 (procd)
+#   ./ms.sh frp-only <激活码>        仅挂 frp: 已有 MiaoSpeed 后端, 只装 frpc 隧道 (localPort 取自激活配置)
 #   ./ms.sh update                  更新 miaospeed 与 frpc (含每日 cron)
 #   ./ms.sh help                    显示帮助
 #
@@ -53,6 +54,7 @@ usage() {
   ./ms.sh install <激活码>         自动检测平台并安装
   ./ms.sh install-debian <激活码>   Debian 安装 (supervisor)
   ./ms.sh install-openwrt <激活码>  OpenWrt 安装 (procd /etc/init.d)
+  ./ms.sh frp-only <激活码>         仅挂 frp: 已有 MiaoSpeed 后端, 只装 frpc 隧道
   ./ms.sh update                   更新 miaospeed 与 frpc (并设置每日 cron)
   ./ms.sh help                     显示帮助
 
@@ -160,8 +162,11 @@ activate() {
         a.haitunt.org:*) frp_port=${addr#a.haitunt.org:} ;;
         *) die "服务器返回的地址无效: $addr" ;;
     esac
+    # 租户已有后端的本地端口 (frp-only 模式使用; install 模式固定 45500)
+    local_port=$(echo "$resp" | jq -r '.payload.localPort // 45500' | tr -d '\r')
     USER="$user"; TOKEN_PARAM="$token"; PATH_PARAM="$path"; FRPPORT_PARAM="$frp_port"
-    info "配置获取成功: 用户=$USER 端口=$FRPPORT_PARAM path=$PATH_PARAM"
+    LOCAL_PORT_PARAM="$local_port"
+    info "配置获取成功: 用户=$USER 端口=$FRPPORT_PARAM path=$PATH_PARAM localPort=$LOCAL_PORT_PARAM"
 }
 
 # ---------------- 版本获取与下载 (三脚本共用逻辑) ----------------
@@ -204,7 +209,7 @@ download_and_extract() {
 
 # ---------------- 配置文件 ----------------
 write_frpc_toml() {
-    local dir="$1"
+    local dir="$1" local_port="$2"
     cat > "$dir/frpc.toml" <<EOF
 serverAddr = "a.haitunt.org"
 serverPort = 10102
@@ -216,7 +221,7 @@ dnsServer = "119.29.29.29"
 name = "$USER.$FRPPORT_PARAM"
 type = "tcp"
 localIP = "127.0.0.1"
-localPort = 45500
+localPort = $local_port
 remotePort = $FRPPORT_PARAM
 EOF
     info "frpc.toml 已生成: $dir/frpc.toml"
@@ -433,7 +438,7 @@ cmd_install() {
     done )
     chmod +x "$dir"/miaospeed-linux-"$arch" "$dir"/frpc
 
-    write_frpc_toml "$dir"
+    write_frpc_toml "$dir" 45500
     if [ "$platform" = "debian" ]; then
         install_service_debian "$dir"
     else
@@ -489,6 +494,37 @@ cmd_update() {
     info "服务已启动"
 }
 
+# ---------------- 仅挂 frp (已有后端) ----------------
+cmd_frp_only() {
+    local code="$1" dir url archive nested
+    [ -n "$code" ] || die "缺少激活码。用法: ./ms.sh frp-only <激活码>"
+    check_root
+    command -v curl >/dev/null 2>&1 || die "缺少 curl"
+    command -v jq >/dev/null 2>&1 || die "缺少 jq"
+    detect_arch
+    activate "$code"
+    dir="$DEFAULT_DIR"
+    mkdir -p "$dir" || die "无法创建目录: $dir"
+    info "下载 frpc ..."
+    url=$(get_latest_url "fatedier/frp") || die "获取 frp 下载链接失败"
+    archive="$dir/$(basename "$url")"
+    curl -sL -o "$archive" "${ghproxy}${url}" || die "下载失败: $archive"
+    tar zxf "$archive" -C "$dir" >/dev/null 2>&1 || die "解压失败: $archive"
+    rm -f "$archive"
+    nested=$(find "$dir" -maxdepth 1 -type d -name "frp*linux*${arch}*" | head -n 1)
+    if [ -n "$nested" ] && [ -f "$nested/frpc" ]; then
+        mv "$nested/frpc" "$dir/" 2>/dev/null
+        rm -rf "$nested"
+    fi
+    [ -s "$dir/frpc" ] || die "frpc 二进制无效或缺失"
+    chmod +x "$dir/frpc"
+    write_frpc_toml "$dir" "$LOCAL_PORT_PARAM"
+    pkill -f "frpc -c $dir/frpc.toml" 2>/dev/null || true
+    nohup "$dir/frpc" -c "$dir/frpc.toml" >/dev/null 2>&1 &
+    info "frpc 已启动: 本地端口 $LOCAL_PORT_PARAM -> a.haitunt.org:$FRPPORT_PARAM"
+    info "查看状态: ps | grep frpc ; 重启后请重新执行本命令"
+}
+
 # ---------------- 入口 ----------------
 main() {
     local cmd="" code=""
@@ -500,6 +536,7 @@ main() {
             update|-u|--update) cmd="update"; shift ;;
             install-debian) cmd="install-debian"; shift ;;
             install-openwrt) cmd="install-openwrt"; shift ;;
+            frp-only) cmd="frp-only"; shift ;;
             install) cmd="install"; shift ;;
             *)
                 # 首参不是已知命令时视为激活码 (兼容旧用法: ./ms.sh CODE)
@@ -513,6 +550,7 @@ main() {
         update) cmd_update ;;
         install-debian) cmd_install "$code" debian ;;
         install-openwrt) cmd_install "$code" openwrt ;;
+        frp-only) cmd_frp_only "$code" ;;
         install) cmd_install "$code" auto ;;
         *) usage; exit 1 ;;
     esac
