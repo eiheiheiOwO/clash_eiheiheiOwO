@@ -162,11 +162,13 @@ activate() {
         a.haitunt.org:*) frp_port=${addr#a.haitunt.org:} ;;
         *) die "服务器返回的地址无效: $addr" ;;
     esac
-    # 租户已有后端的本地端口 (frp-only 模式使用; install 模式固定 45500)
+    # 租户已有后端的本地地址 (frp-only 模式使用; install 模式固定 127.0.0.1:45500)
     local_port=$(echo "$resp" | jq -r '.payload.localPort // 45500' | tr -d '\r')
+    local_ip=$(echo "$resp" | jq -r '.payload.localIp // empty' | tr -d '\r')
+    [ -z "$local_ip" ] && local_ip="127.0.0.1"
     USER="$user"; TOKEN_PARAM="$token"; PATH_PARAM="$path"; FRPPORT_PARAM="$frp_port"
-    LOCAL_PORT_PARAM="$local_port"
-    info "配置获取成功: 用户=$USER 端口=$FRPPORT_PARAM path=$PATH_PARAM localPort=$LOCAL_PORT_PARAM"
+    LOCAL_PORT_PARAM="$local_port"; LOCAL_IP_PARAM="$local_ip"
+    info "配置获取成功: 用户=$USER 端口=$FRPPORT_PARAM path=$PATH_PARAM localPort=$LOCAL_PORT_PARAM localIp=$LOCAL_IP_PARAM"
 }
 
 # ---------------- 版本获取与下载 (三脚本共用逻辑) ----------------
@@ -209,7 +211,7 @@ download_and_extract() {
 
 # ---------------- 配置文件 ----------------
 write_frpc_toml() {
-    local dir="$1" local_port="$2"
+    local dir="$1" local_port="$2" local_ip="${3:-127.0.0.1}"
     cat > "$dir/frpc.toml" <<EOF
 serverAddr = "a.haitunt.org"
 serverPort = 10102
@@ -220,7 +222,7 @@ dnsServer = "119.29.29.29"
 [[proxies]]
 name = "$USER.$FRPPORT_PARAM"
 type = "tcp"
-localIP = "127.0.0.1"
+localIP = "$local_ip"
 localPort = $local_port
 remotePort = $FRPPORT_PARAM
 EOF
@@ -518,7 +520,7 @@ cmd_frp_only() {
     fi
     [ -s "$dir/frpc" ] || die "frpc 二进制无效或缺失"
     chmod +x "$dir/frpc"
-    write_frpc_toml "$dir" "$LOCAL_PORT_PARAM"
+    write_frpc_toml "$dir" "$LOCAL_PORT_PARAM" "$LOCAL_IP_PARAM"
     pkill -f "frpc -c $dir/frpc.toml" 2>/dev/null || true
     nohup "$dir/frpc" -c "$dir/frpc.toml" >/dev/null 2>&1 &
     info "frpc 已启动: 本地端口 $LOCAL_PORT_PARAM -> a.haitunt.org:$FRPPORT_PARAM"
